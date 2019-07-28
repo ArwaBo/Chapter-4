@@ -8,8 +8,10 @@ __author__ = "Arwa Shaker"
 import numpy as np
 import random
 import matplotlib.pyplot as plt
+from Large_Neighborhood_Search import Large_Neighborhood_Search
 
-def DE(objective_f, bounds, PS=10, its=100):
+def DE(objective_f, bounds, PS=10, its=10):
+    LNS_best_list = []
     dimensions = len(bounds)
     """----------------------------------------------------------------------------"""
     """                Step #1 generate the Initial Population randomly            """
@@ -128,8 +130,19 @@ def DE(objective_f, bounds, PS=10, its=100):
                 if f_3 > fitness[best_idx]:
                     best_idx = j
                     best = trial_3_denorm
+        """----------------------------------------------------------------------------"""
+        """                           The Local Search Calling                         """
+        """----------------------------------------------------------------------------"""
+        AssQuality_matrix = pd.read_csv("C:/Users/Arwa/Desktop/datasets/MOO/A_matrix.csv", index_col=0)
+        AssQuality_matrix = AssQuality_matrix.fillna(0.0)
+        X = pd.Series(best, index=[task for task in AssQuality_matrix.index])
+        Y = List_Scheduling(X)
+        LNS_best, LNS_best_f = Large_Neighborhood_Search(Y)
+        if LNS_best_f > fitness[best_idx]:
+            LNS_best_list.append(LNS_best)
 
-        yield best, fitness[best_idx]
+
+        yield best, fitness[best_idx], LNS_best_list
 
 
 # this code is to find the number of calls to the objective function
@@ -150,20 +163,12 @@ import pandas as pd
 from List_Scheduling_Algo import List_Scheduling
 @call_counter
 def objective_f(x):
-    X = pd.Series(x, index=['t1', 't2', 't3','t4','t5','t6'])
+    AssQuality_matrix = pd.read_csv("C:/Users/Arwa/Desktop/datasets/MOO/A_matrix.csv",index_col=0)
+    AssQuality_matrix = AssQuality_matrix.fillna(0.0)
+    X = pd.Series(x, index= [task for task in AssQuality_matrix.index])
     Y = List_Scheduling(X)
-    AssQuality_matrix = pd.DataFrame()
-    for j in Y.index:
-        AssQuality_matrix.loc[j, Y.loc[j]] = 0.5
-    AssQuality_matrix = AssQuality_matrix.fillna(0.7)
-    # creating the best solution
-    AssQuality_matrix.loc['t1', 'w1'] = 1
-    AssQuality_matrix.loc['t2', 'w2'] = 1
-    AssQuality_matrix.loc['t3', 'w3'] = 1
-    AssQuality_matrix.loc['t4', 'w1'] = 1
-    AssQuality_matrix.loc['t5', 'w2'] = 1
-    AssQuality_matrix.loc['t6', 'w3'] = 1
- 
+
+
     value = 0.0
     for task in Y.index:
         if not pd.isna(Y[task]):
@@ -175,12 +180,16 @@ def objective_f(x):
 """----------------------------------------------------------------------------"""
 """                         Calling the DE and Plotting                        """
 """----------------------------------------------------------------------------"""
-bounds=[(0, 1)] * 6
-it = list(DE(objective_f,bounds))
+bounds=[(0, 1)] * 12
+# it = list(DE(objective_f,bounds))
+#
+# x, f, LNS_best_list = zip(*it)
+x, f, LNS_best_list = DE(objective_f,bounds)
+print("Lns best list", LNS_best_list[-1])
+AssQuality_matrix = pd.read_csv("C:/Users/Arwa/Desktop/datasets/MOO/A_matrix.csv",index_col=0)
+DE_sol = pd.Series(x[-1], index= [task for task in AssQuality_matrix.index])
 
-x, f = zip(*it)
-
-print("final solution**********************************************************\n",x[-1])
+print("final solution**********************************************************\n",List_Scheduling(DE_sol))
 print("f",f[-1])
 plt.plot(x, f, 'g^')
 
